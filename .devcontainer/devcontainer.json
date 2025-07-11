@@ -1,0 +1,24 @@
+{
+  "name": "cloud-vpn",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "shutdownAction": "stopContainer",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "esbenp.prettier-vscode",
+        "github.copilot"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[terraform]": {
+          "editor.defaultFormatter": "hashicorp.terraform"
+        }
+      }
+    }
+  },
+  "remoteUser": "vscode"
+}

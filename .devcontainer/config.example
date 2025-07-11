@@ -1,0 +1,11 @@
+[DEFAULT]
+# This part will be created by handed by oci for you
+user=ocid1.user.oc1..your_user_ocid
+fingerprint=ab:cd:ef:12:34:56:78:90:...
+key_file=~/.oci/oci_api_key.pem
+tenancy=ocid1.tenancy.oc1..your_tenancy_ocid
+region=eu-frankfurt-1
+# This part you need to adapt yourself or rename the key file
+key_file=/home/vscode/.oci/oci_api_key.pem
+
+# You need to create the /home/vscode/.oci/ folder and copy the config and key files to it.
