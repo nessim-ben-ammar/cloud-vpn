@@ -1,2 +1,7 @@
 .terraform/*
 .terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+
+# SSH Keys - keep private keys secure
+ssh_keys/*
