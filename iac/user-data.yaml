@@ -278,11 +278,14 @@ write_files:
       # Generate QR code
       qrencode -t ansiutf8 < "${CLIENT_NAME}.conf"
 
+      # Restart WireGuard to apply the new peer
+      systemctl restart wg-quick@wg0
+
       echo ""
       echo "Client '$CLIENT_NAME' added successfully!"
       echo "Client IP: $CLIENT_IP"
       echo "Config file: ${CLIENT_NAME}.conf"
-      echo "Restart WireGuard: systemctl restart wg-quick@wg0"
+      echo "WireGuard restarted"
     owner: root:root
     permissions: "0755"
 
