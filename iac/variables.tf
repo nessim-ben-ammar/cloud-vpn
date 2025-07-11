@@ -9,3 +9,9 @@ variable "region" {
   type        = string
   default     = "eu-frankfurt-1"
 }
+
+variable "availability_domain" {
+  description = "The availability domain where the instance will be created"
+  type        = string
+  default     = "aGAO:EU-FRANKFURT-1-AD-3"
+}

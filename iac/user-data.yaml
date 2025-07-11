@@ -1,0 +1,297 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - ufw
+  - fail2ban
+  - wireguard
+  - wireguard-tools
+  - qrencode
+  - net-tools
+  - htop
+  - unbound
+  - dnsutils
+
+write_files:
+  - path: /etc/sysctl.d/99-wireguard.conf
+    content: |
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+    owner: root:root
+    permissions: "0644"
+
+  - path: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      # Ban settings
+      bantime = 3600
+      findtime = 600
+      maxretry = 3
+      
+      # Email settings (optional)
+      # destemail = admin@example.com
+      # sender = fail2ban@example.com
+      
+      # SSH protection
+      [sshd]
+      enabled = true
+      port = ssh
+      filter = sshd
+      logpath = /var/log/auth.log
+      maxretry = 3
+      bantime = 3600
+      
+      # Additional SSH brute force protection
+      [sshd-ddos]
+      enabled = true
+      port = ssh
+      filter = sshd-ddos
+      logpath = /var/log/auth.log
+      maxretry = 6
+      bantime = 3600
+      
+      # Protect against port scanning
+      [nmap]
+      enabled = true
+      filter = nmap
+      logpath = /var/log/kern.log
+      maxretry = 3
+      bantime = 86400
+      
+      # Generic filter for repeated failed attempts
+      [recidive]
+      enabled = true
+      filter = recidive
+      logpath = /var/log/fail2ban.log
+      action = iptables-allports[name=recidive]
+      bantime = 86400
+      findtime = 86400
+      maxretry = 3
+    owner: root:root
+    permissions: "0644"
+
+  - path: /etc/fail2ban/filter.d/nmap.conf
+    content: |
+      [Definition]
+      failregex = kernel: \[.*\] .*IN=.* SRC=<HOST> DST=.* PROTO=TCP.*DPT=22.*
+      ignoreregex =
+    owner: root:root
+    permissions: "0644"
+
+  - path: /etc/unbound/unbound.conf.d/vpn.conf
+    content: |
+      server:
+        # Listen on all interfaces
+        interface: 0.0.0.0
+        interface: ::0
+        
+        # Allow queries from VPN clients
+        access-control: 10.0.1.0/24 allow
+        access-control: 127.0.0.0/8 allow
+        access-control: ::1 allow
+        
+        # Security settings
+        hide-identity: yes
+        hide-version: yes
+        harden-glue: yes
+        harden-dnssec-stripped: yes
+        harden-below-nxdomain: yes
+        harden-referral-path: yes
+        
+        # Performance settings
+        num-threads: 2
+        msg-cache-slabs: 4
+        rrset-cache-slabs: 4
+        infra-cache-slabs: 4
+        key-cache-slabs: 4
+        
+        # Cache settings
+        msg-cache-size: 32m
+        rrset-cache-size: 64m
+        cache-min-ttl: 300
+        cache-max-ttl: 86400
+        
+        # Privacy settings
+        prefetch: yes
+        prefetch-key: yes
+        rrset-roundrobin: yes
+        minimal-responses: yes
+        
+        # DNSSEC
+        auto-trust-anchor-file: "/var/lib/unbound/root.key"
+        
+        # Root hints
+        root-hints: "/etc/unbound/root.hints"
+        
+        # Logging (optional, can be disabled for performance)
+        verbosity: 1
+        log-queries: no
+        log-replies: no
+        
+        # Listen on port 53
+        port: 53
+        
+        # Do not use system resolver
+        do-not-query-localhost: no
+        
+      # Forward queries to root servers (no upstream DNS)
+      # This ensures maximum privacy
+    owner: root:root
+    permissions: "0644"
+
+  - path: /root/setup-wireguard.sh
+    content: |
+      #!/bin/bash
+
+      # Enable IP forwarding
+      sysctl -p /etc/sysctl.d/99-wireguard.conf
+
+      # Configure UFW firewall
+      ufw --force reset
+      ufw default deny incoming
+      ufw default allow outgoing
+      ufw allow ssh
+      ufw allow 51820/udp
+      ufw allow from 10.0.1.0/24 to any port 53
+      ufw --force enable
+
+      # Setup Unbound DNS
+      echo "Setting up Unbound DNS server..."
+      
+      # Disable systemd-resolved to free up port 53
+      systemctl disable systemd-resolved
+      systemctl stop systemd-resolved
+      
+      # Remove the systemd-resolved stub listener
+      rm -f /etc/resolv.conf
+      echo "nameserver 1.1.1.1" > /etc/resolv.conf
+      echo "nameserver 1.0.0.1" >> /etc/resolv.conf
+      
+      # Download root hints
+      curl -s https://www.internic.net/domain/named.cache -o /etc/unbound/root.hints
+      
+      # Set ownership and permissions
+      chown unbound:unbound /etc/unbound/root.hints
+      
+      # Enable and start Unbound
+      systemctl enable unbound
+      systemctl start unbound
+      
+      # Wait for Unbound to start
+      sleep 5
+      
+      # Test Unbound
+      echo "Testing Unbound DNS..."
+      dig @127.0.0.1 google.com +short
+      
+      # Generate WireGuard keys
+      mkdir -p /etc/wireguard
+      wg genkey | sudo tee /etc/wireguard/server-private.key | wg pubkey | sudo tee /etc/wireguard/server-public.key
+      chmod 600 /etc/wireguard/server-private.key
+
+      # Get server details
+      SERVER_PRIVATE_KEY=$(cat /etc/wireguard/server-private.key)
+      SERVER_PUBLIC_KEY=$(cat /etc/wireguard/server-public.key)
+      SERVER_PUBLIC_IP=$(curl -s ifconfig.me)
+
+      # Create WireGuard server config
+      cat > /etc/wireguard/wg0.conf << EOF
+      [Interface]
+      Address = 10.0.1.1/24
+      ListenPort = 51820
+      PrivateKey = $SERVER_PRIVATE_KEY
+      PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
+      PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o ens3 -j MASQUERADE
+      EOF
+
+      # Enable and start WireGuard
+      systemctl enable wg-quick@wg0
+      systemctl start wg-quick@wg0
+
+      # Display server info
+      echo "WireGuard server setup complete!"
+      echo "Server Public Key: $SERVER_PUBLIC_KEY"
+      echo "Server Public IP: $SERVER_PUBLIC_IP"
+      echo "Server listening on port 51820"
+      echo "DNS server: 10.0.1.1 (Unbound)"
+      echo ""
+      echo "To add clients later, use: sudo /root/add-client.sh <client-name>"
+    owner: root:root
+    permissions: "0755"
+
+  - path: /root/add-client.sh
+    content: |
+      #!/bin/bash
+
+      if [ -z "$1" ]; then
+          echo "Usage: $0 <client-name>"
+          exit 1
+      fi
+
+      CLIENT_NAME="$1"
+      SERVER_PUBLIC_IP=$(curl -s ifconfig.me)
+      SERVER_PUBLIC_KEY=$(cat /etc/wireguard/server-public.key)
+
+      # Generate client keys
+      cd /etc/wireguard
+      wg genkey | tee "${CLIENT_NAME}-private.key" | wg pubkey > "${CLIENT_NAME}-public.key"
+      chmod 600 "${CLIENT_NAME}-private.key"
+
+      CLIENT_PRIVATE_KEY=$(cat "${CLIENT_NAME}-private.key")
+      CLIENT_PUBLIC_KEY=$(cat "${CLIENT_NAME}-public.key")
+
+      # Get next available IP
+      LAST_IP=$(grep -E "AllowedIPs = 10\.0\.1\.[0-9]+/32" wg0.conf | tail -1 | grep -oE "10\.0\.1\.[0-9]+" | cut -d. -f4)
+      if [ -z "$LAST_IP" ]; then
+          NEXT_IP=2
+      else
+          NEXT_IP=$((LAST_IP + 1))
+      fi
+
+      CLIENT_IP="10.0.1.${NEXT_IP}"
+
+      # Add client to server config
+      cat >> /etc/wireguard/wg0.conf << EOF
+
+      [Peer]
+      PublicKey = $CLIENT_PUBLIC_KEY
+      AllowedIPs = $CLIENT_IP/32
+      EOF
+
+      # Create client config
+      cat > "${CLIENT_NAME}.conf" << EOF
+      [Interface]
+      PrivateKey = $CLIENT_PRIVATE_KEY
+      Address = $CLIENT_IP/24
+      DNS = 10.0.1.1
+
+      [Peer]
+      PublicKey = $SERVER_PUBLIC_KEY
+      Endpoint = $SERVER_PUBLIC_IP:51820
+      AllowedIPs = 0.0.0.0/0, ::/0
+      PersistentKeepalive = 25
+      EOF
+
+      # Generate QR code
+      qrencode -t ansiutf8 < "${CLIENT_NAME}.conf"
+
+      echo ""
+      echo "Client '$CLIENT_NAME' added successfully!"
+      echo "Client IP: $CLIENT_IP"
+      echo "Config file: ${CLIENT_NAME}.conf"
+      echo "Restart WireGuard: systemctl restart wg-quick@wg0"
+    owner: root:root
+    permissions: "0755"
+
+runcmd:
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+  - echo "Fail2ban configuration applied"
+  - fail2ban-client status
+  - echo "Cloud-init complete. Starting WireGuard setup..."
+  - /root/setup-wireguard.sh
+
+final_message: "VPN server setup complete! WireGuard is now running and ready for clients."

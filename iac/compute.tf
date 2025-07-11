@@ -3,7 +3,7 @@ data "oci_core_images" "ubuntu_images" {
   compartment_id           = oci_identity_compartment.cloud_vpn_cmp.id
   operating_system         = "Canonical Ubuntu"
   operating_system_version = "24.04 Minimal"
-  shape                    = "VM.Standard.E2.1.Micro"
+  shape                    = "VM.Standard.E3.Flex"
   sort_by                  = "TIMECREATED"
   sort_order               = "DESC"
 }
@@ -39,10 +39,15 @@ locals {
 
 # Create the compute instance
 resource "oci_core_instance" "cloud_vpn_instance" {
-  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  availability_domain = var.availability_domain
   compartment_id      = oci_identity_compartment.cloud_vpn_cmp.id
   display_name        = "cloud-vpn-${var.region}-instance"
-  shape               = "VM.Standard.E2.1.Micro"
+  shape               = "VM.Standard.E3.Flex"
+
+  shape_config {
+    ocpus         = 1
+    memory_in_gbs = 4
+  }
 
   create_vnic_details {
     subnet_id        = oci_core_subnet.cloud_vpn_pub_sn.id
@@ -56,6 +61,7 @@ resource "oci_core_instance" "cloud_vpn_instance" {
 
   metadata = {
     ssh_authorized_keys = local.ssh_public_key
+    user_data           = base64encode(file("${path.module}/user-data.yaml"))
   }
 
   preserve_boot_volume = false
