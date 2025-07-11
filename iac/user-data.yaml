@@ -4,6 +4,8 @@ packages:
   - wireguard
   - iptables-persistent
   - qrencode
+  - unbound
+  - unbound-anchor
 
 write_files:
   - path: /usr/local/bin/setup-wireguard.sh
@@ -49,7 +51,43 @@ write_files:
       iptables -P OUTPUT ACCEPT
       iptables -A INPUT -p tcp --dport 22 -j ACCEPT
       iptables -A INPUT -p udp --dport 51820 -j ACCEPT
+      iptables -t nat -A PREROUTING -i wg0 -p udp --dport 53 -j DNAT --to-destination 192.168.2.1
       netfilter-persistent save
+
+      # Configure Unbound root DNS
+      curl -o /var/lib/unbound/root.hints https://www.internic.net/domain/named.root
+      unbound-anchor -a /var/lib/unbound/root.key || true
+      
+      # Fix permissions for unbound user
+      chown unbound:unbound /var/lib/unbound/root.key
+      chmod 644 /var/lib/unbound/root.hints
+
+      cat > /etc/unbound/unbound.conf.d/wireguard.conf <<EOF_UNBOUND
+      server:
+          interface: 0.0.0.0
+          access-control: 127.0.0.0/8 allow
+          access-control: 192.168.2.0/24 allow
+          root-hints: "/var/lib/unbound/root.hints"
+          do-ip4: yes
+          do-udp: yes
+          do-tcp: yes
+          hide-identity: yes
+          hide-version: yes
+          harden-glue: yes
+          harden-dnssec-stripped: yes
+          use-caps-for-id: yes
+          qname-minimisation: yes
+          prefetch: yes
+      EOF_UNBOUND
+
+      # Stop and disable systemd-resolved
+      systemctl disable --now systemd-resolved || true
+      rm -f /etc/resolv.conf
+      echo "nameserver 127.0.0.1" > /etc/resolv.conf
+
+      # Start Unbound
+      systemctl enable unbound
+      systemctl restart unbound
 
       # Start WireGuard
       systemctl enable wg-quick@wg0

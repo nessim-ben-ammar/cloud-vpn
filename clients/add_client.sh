@@ -47,7 +47,7 @@ cat > \${CLIENT_NAME}.conf <<EOC
 [Interface]
 PrivateKey = \$CLIENT_PRIV
 Address = \$CLIENT_IP/32
-DNS = 1.1.1.1
+DNS = 192.168.2.1
 
 [Peer]
 PublicKey = \$SERVER_PUB
