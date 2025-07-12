@@ -11,6 +11,11 @@ This repository contains Terraform configurations and helper scripts to deploy a
 3. Optionally run `clients/backup_keys.sh <s3-bucket>` to archive server keys and
    client configurations to an S3 bucket. Use `clients/restore_keys.sh <s3-bucket>`
    on a fresh instance to restore the configuration and keep existing clients.
+4. Use `clients/backup_configs.sh` to download a compressed archive of all client
+   configuration files via `scp`. The archive is saved as `client-configs.tar.gz`
+   in the `clients/` directory.
+5. Run `clients/restore_configs.sh [archive]` to upload a previously downloaded
+   archive to a new instance and restart WireGuard.
 
 ## Restoring Configuration
 
