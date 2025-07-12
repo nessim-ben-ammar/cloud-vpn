@@ -63,24 +63,28 @@ resource "aws_security_group" "cloud_vpn_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    description = "GA Health Check TCP 8080"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  dynamic "ingress" {
+    for_each = var.deploy_global_accelerator ? [1] : []
+    content {
+      description = "GA Health Check TCP 8080"
+      from_port   = 8080
+      to_port     = 8080
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 }
 
 # Configure AWS Global Accelerator to speed up VPN access
-
 resource "aws_globalaccelerator_accelerator" "cloud_vpn" {
+  count   = var.deploy_global_accelerator ? 1 : 0
   name    = "cloud-vpn-accelerator"
   enabled = true
 }
 
 resource "aws_globalaccelerator_listener" "cloud_vpn" {
-  accelerator_arn = aws_globalaccelerator_accelerator.cloud_vpn.id
+  count           = var.deploy_global_accelerator ? 1 : 0
+  accelerator_arn = aws_globalaccelerator_accelerator.cloud_vpn[0].id
   client_affinity = "NONE"
   protocol        = "UDP"
 
@@ -91,7 +95,8 @@ resource "aws_globalaccelerator_listener" "cloud_vpn" {
 }
 
 resource "aws_globalaccelerator_endpoint_group" "cloud_vpn" {
-  listener_arn          = aws_globalaccelerator_listener.cloud_vpn.id
+  count                 = var.deploy_global_accelerator ? 1 : 0
+  listener_arn          = aws_globalaccelerator_listener.cloud_vpn[0].id
   endpoint_group_region = var.region
   health_check_protocol = "TCP"
   health_check_port     = 8080

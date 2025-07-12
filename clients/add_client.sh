@@ -1,8 +1,8 @@
 #!/bin/bash
 
 SERVER_IP=$(terraform -chdir=../iac output -raw instance_public_ip)
-# DNS name of the Global Accelerator for client configurations
-GA_DNS=$(terraform -chdir=../iac output -raw global_accelerator_dns)
+# Endpoint can be the Global Accelerator DNS, a static IP, or the instance's public IP
+VPN_ENDPOINT=$(terraform -chdir=../iac output -raw vpn_endpoint)
 SERVER="ubuntu@$SERVER_IP"
 SSH_KEY="../iac/ssh_keys/aws-instance-ssh-key"
 
@@ -18,7 +18,7 @@ ssh -i "$SSH_KEY" $SERVER "sudo bash -s" <<EOF
 set -e
 CLIENT_NAME="$CLIENT_NAME"
 SERVER_PUBLIC_IP="$SERVER_IP"
-SERVER_ENDPOINT="$GA_DNS"
+SERVER_ENDPOINT="$VPN_ENDPOINT"
 
 cd /etc/wireguard
 mkdir -p clients/\$CLIENT_NAME

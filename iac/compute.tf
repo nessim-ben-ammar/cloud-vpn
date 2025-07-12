@@ -48,3 +48,9 @@ resource "aws_instance" "cloud_vpn_instance" {
   user_data                   = file("${path.module}/user-data.yaml")
 }
 
+resource "aws_eip" "static_ip" {
+  count    = var.assign_elastic_ip ? 1 : 0
+  instance = aws_instance.cloud_vpn_instance.id
+  vpc      = true
+}
+
