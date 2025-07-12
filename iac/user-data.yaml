@@ -16,6 +16,12 @@ write_files:
       #!/bin/bash
       set -e
 
+      if [ -f /etc/wireguard/wg0.conf ]; then
+        systemctl enable wg-quick@wg0
+        systemctl restart wg-quick@wg0
+        exit 0
+      fi
+
       # Detect external interface (you can hardcode if needed)
       EXT_IF="ens5"
 
@@ -97,6 +103,7 @@ write_files:
 
       # Start socat TCP listener for GA health check on port 8080
       nohup socat TCP-LISTEN:8080,reuseaddr,fork EXEC:'echo -e "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"' > /dev/null 2>&1 &
+
 
 runcmd:
   - bash /usr/local/bin/setup-wireguard.sh

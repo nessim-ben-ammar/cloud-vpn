@@ -14,3 +14,5 @@ output "global_accelerator_dns" {
   description = "DNS name for the Global Accelerator"
   value       = aws_globalaccelerator_accelerator.cloud_vpn.dns_name
 }
+
+

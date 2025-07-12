@@ -1,6 +1,8 @@
 #!/bin/bash
 
 SERVER_IP=$(terraform -chdir=../iac output -raw instance_public_ip)
+# DNS name of the Global Accelerator for client configurations
+GA_DNS=$(terraform -chdir=../iac output -raw global_accelerator_dns)
 SERVER="ubuntu@$SERVER_IP"
 SSH_KEY="../iac/ssh_keys/aws-instance-ssh-key"
 
@@ -16,6 +18,7 @@ ssh -i "$SSH_KEY" $SERVER "sudo bash -s" <<EOF
 set -e
 CLIENT_NAME="$CLIENT_NAME"
 SERVER_PUBLIC_IP="$SERVER_IP"
+SERVER_ENDPOINT="$GA_DNS"
 
 cd /etc/wireguard
 mkdir -p clients/\$CLIENT_NAME
@@ -51,7 +54,7 @@ DNS = 192.168.2.1
 
 [Peer]
 PublicKey = \$SERVER_PUB
-Endpoint = \$SERVER_PUBLIC_IP:51820
+Endpoint = \$SERVER_ENDPOINT:51820
 AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOC
@@ -82,4 +85,6 @@ scp -i "$SSH_KEY" $SERVER:/home/ubuntu/${CLIENT_NAME}.conf .
 
 # Clean up temporary file on server
 ssh -i "$SSH_KEY" $SERVER "rm -f /home/ubuntu/${CLIENT_NAME}.conf"
-cd
+
+# Trigger a backup so configurations are saved locally
+$(dirname "$0")/backup_configs.sh

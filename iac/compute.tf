@@ -38,6 +38,7 @@ resource "aws_key_pair" "cloud_vpn_ssh_key" {
   public_key = tls_private_key.ssh_key.public_key_openssh
 }
 
+
 resource "aws_instance" "cloud_vpn_instance" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = "t3.micro"
