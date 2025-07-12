@@ -1,17 +1,11 @@
-variable "tenancy_ocid" {
-  description = "The OCID of the tenancy"
-  type        = string
-  default     = "ocid1.tenancy.oc1..aaaaaaaaerpfsav3vgybi7nylv2qojstwz6l4s275fxvczvwzspzvvrmt3rq"
-}
-
 variable "region" {
-  description = "The OCI region to deploy resources in"
+  description = "AWS region"
   type        = string
-  default     = "eu-frankfurt-1"
+  default     = "us-east-1"
 }
 
-variable "availability_domain" {
-  description = "The availability domain where the instance will be created"
+variable "availability_zone" {
+  description = "AWS availability zone"
   type        = string
-  default     = "aGAO:EU-FRANKFURT-1-AD-3"
+  default     = "us-east-1a"
 }

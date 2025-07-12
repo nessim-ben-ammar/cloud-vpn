@@ -16,7 +16,7 @@ write_files:
       set -e
 
       # Detect external interface (you can hardcode if needed)
-      EXT_IF="ens3"
+      EXT_IF="eth0"
 
       # Create key directory
       mkdir -p /etc/wireguard
