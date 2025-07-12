@@ -1,3 +1,3 @@
-provider "oci" {
+provider "aws" {
   region = var.region
 }
