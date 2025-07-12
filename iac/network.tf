@@ -8,9 +8,9 @@ resource "aws_internet_gateway" "cloud_vpn_ig" {
 }
 
 resource "aws_subnet" "cloud_vpn_pub_sn" {
-  vpc_id            = aws_vpc.cloud_vpn_vpc.id
-  cidr_block        = "10.0.0.0/24"
-  availability_zone = var.availability_zone
+  vpc_id                  = aws_vpc.cloud_vpn_vpc.id
+  cidr_block              = "10.0.0.0/24"
+  availability_zone       = var.availability_zone
   map_public_ip_on_launch = true
 }
 
@@ -62,6 +62,14 @@ resource "aws_security_group" "cloud_vpn_sg" {
     protocol    = "icmp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    description = "GA Health Check TCP 8080"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # Configure AWS Global Accelerator to speed up VPN access
@@ -85,9 +93,12 @@ resource "aws_globalaccelerator_listener" "cloud_vpn" {
 resource "aws_globalaccelerator_endpoint_group" "cloud_vpn" {
   listener_arn          = aws_globalaccelerator_listener.cloud_vpn.id
   endpoint_group_region = var.region
+  health_check_protocol = "TCP"
+  health_check_port     = 8080
 
   endpoint_configuration {
-    endpoint_id = aws_instance.cloud_vpn_instance.id
-    weight      = 128
+    endpoint_id                    = aws_instance.cloud_vpn_instance.id
+    weight                         = 128
+    client_ip_preservation_enabled = true
   }
 }

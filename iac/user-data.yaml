@@ -6,6 +6,7 @@ packages:
   - qrencode
   - unbound
   - unbound-anchor
+  - socat
 
 write_files:
   - path: /usr/local/bin/setup-wireguard.sh
@@ -51,6 +52,7 @@ write_files:
       iptables -P OUTPUT ACCEPT
       iptables -A INPUT -p tcp --dport 22 -j ACCEPT
       iptables -A INPUT -p udp --dport 51820 -j ACCEPT
+      iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
       iptables -t nat -A PREROUTING -i wg0 -p udp --dport 53 -j DNAT --to-destination 192.168.2.1
       netfilter-persistent save
 
@@ -92,6 +94,9 @@ write_files:
       # Start WireGuard
       systemctl enable wg-quick@wg0
       systemctl start wg-quick@wg0
+
+      # Start socat TCP listener for GA health check on port 8080
+      nohup socat TCP-LISTEN:8080,reuseaddr,fork EXEC:'echo -e "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"' > /dev/null 2>&1 &
 
 runcmd:
   - bash /usr/local/bin/setup-wireguard.sh
