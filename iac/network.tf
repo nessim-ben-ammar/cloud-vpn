@@ -63,3 +63,31 @@ resource "aws_security_group" "cloud_vpn_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+# Configure AWS Global Accelerator to speed up VPN access
+
+resource "aws_globalaccelerator_accelerator" "cloud_vpn" {
+  name    = "cloud-vpn-accelerator"
+  enabled = true
+}
+
+resource "aws_globalaccelerator_listener" "cloud_vpn" {
+  accelerator_arn = aws_globalaccelerator_accelerator.cloud_vpn.id
+  client_affinity = "NONE"
+  protocol        = "UDP"
+
+  port_range {
+    from_port = 51820
+    to_port   = 51820
+  }
+}
+
+resource "aws_globalaccelerator_endpoint_group" "cloud_vpn" {
+  listener_arn          = aws_globalaccelerator_listener.cloud_vpn.id
+  endpoint_group_region = var.region
+
+  endpoint_configuration {
+    endpoint_id = aws_instance.cloud_vpn_instance.id
+    weight      = 128
+  }
+}
