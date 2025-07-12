@@ -1,9 +1,15 @@
 #!/bin/bash
 
-# Destroy all regional resources while preserving Global Accelerator
+# Destroy all regional resources while preserving the Global Accelerator
 # This allows for seamless region migration
 
-echo "Destroying regional resources (keeping Global Accelerator)..."
+echo "Destroying regional resources (keeping Global Accelerator if deployed)..."
+
+
+GA_TARGET=""
+if terraform state list aws_globalaccelerator_endpoint_group.cloud_vpn >/dev/null 2>&1; then
+  GA_TARGET="-target=aws_globalaccelerator_endpoint_group.cloud_vpn"
+fi
 
 terraform destroy \
   -target=aws_instance.cloud_vpn_instance \
@@ -14,7 +20,7 @@ terraform destroy \
   -target=aws_route_table_association.cloud_vpn_pub_rt_assoc \
   -target=aws_security_group.cloud_vpn_sg \
   -target=aws_key_pair.cloud_vpn_ssh_key \
-  -target=aws_globalaccelerator_endpoint_group.cloud_vpn \
+  $GA_TARGET \
   -target=local_file.ssh_private_key \
   -target=local_file.ssh_public_key \
   -target=tls_private_key.ssh_key

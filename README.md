@@ -1,29 +1,26 @@
 # Cloud VPN with AWS Global Accelerator
 
-This repository contains Terraform configurations and helper scripts to deploy a WireGuard VPN on AWS. The setup uses **AWS Global Accelerator** to expose a stable DNS name that clients can use instead of the instance's public IP.
+This repository contains Terraform configurations and helper scripts to deploy a WireGuard VPN on AWS. By default it creates a regular EC2 instance reachable via its public IP. Set `deploy_global_accelerator=true` to provision **AWS Global Accelerator**, or `assign_elastic_ip=true` to attach a persistent static IP.
 
 ## Usage
 
-1. Deploy the infrastructure from the `iac/` folder using Terraform.
+1. Deploy the infrastructure from the `iac/` folder using Terraform. Enable features with:
+   - `-var deploy_global_accelerator=true` to add Global Accelerator.
+   - `-var assign_elastic_ip=true` for a fixed IP when not using Global Accelerator.
 2. Use `clients/add_client.sh <name>` to create a new WireGuard client configuration.
-   The script fetches the Global Accelerator DNS so the generated config will keep
-   working even if the instance IP changes.
-3. Optionally run `clients/backup_keys.sh <s3-bucket>` to archive server keys and
-   client configurations to an S3 bucket. Use `clients/restore_keys.sh <s3-bucket>`
-   on a fresh instance to restore the configuration and keep existing clients.
-4. Use `clients/backup_configs.sh` to download a compressed archive of all client
-   configuration files via `scp`. The archive is saved as `client-configs.tar.gz`
+   The script automatically fetches the current VPN endpoint (either the Accelerator DNS, the static IP, or the instance IP), so the generated config keeps working after redeploys.
+3. Use `clients/backup_configs.sh` to download a compressed archive of all client
+   configuration files via `scp`. The archive is saved as `wireguard-backup.tar.gz`
    in the `clients/` directory.
-5. Run `clients/restore_configs.sh [archive]` to upload a previously downloaded
+4. Run `clients/restore_configs.sh [archive]` to upload a previously downloaded
    archive to a new instance and restart WireGuard.
 
 ## Restoring Configuration
 
-To spin up a new instance in another region:
+To migrate the VPN to another region:
 
-1. Deploy the Terraform configuration again (potentially with a different region).
-2. Run `clients/restore_keys.sh <s3-bucket>` to download the archived
-   configuration from S3 and apply it to the new instance.
+1. Deploy the Terraform configuration again in the new region.
 
-Because the clients use the Global Accelerator DNS, no changes are required on
-client devices.
+If you keep Global Accelerator deployed, its DNS name remains unchanged globally so existing client configs continue to work.
+When relying on a static IP, the address only persists within a region. Moving regions means a new Elastic IP will be allocated and clients must update their configuration.
+Using `assign_elastic_ip=true` avoids any changes while you remain in the same region.

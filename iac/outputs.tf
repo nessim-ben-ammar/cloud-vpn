@@ -9,8 +9,9 @@ output "ssh_connection_command" {
   value       = "ssh -i ${local_file.ssh_private_key.filename} ubuntu@${aws_instance.cloud_vpn_instance.public_ip}"
 }
 
-# Expose the Global Accelerator DNS name
-output "global_accelerator_dns" {
-  description = "DNS name for the Global Accelerator"
-  value       = aws_globalaccelerator_accelerator.cloud_vpn.dns_name
+output "vpn_endpoint" {
+  description = "DNS name or IP clients should connect to"
+  value = var.deploy_global_accelerator ? aws_globalaccelerator_accelerator.cloud_vpn[0].dns_name : (
+    var.assign_elastic_ip ? aws_eip.static_ip[0].public_ip : aws_instance.cloud_vpn_instance.public_ip
+  )
 }
