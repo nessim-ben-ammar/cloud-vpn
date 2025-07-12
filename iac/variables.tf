@@ -4,8 +4,6 @@ variable "region" {
   default     = "us-east-1"
 }
 
-variable "availability_zone" {
-  description = "AWS availability zone"
-  type        = string
-  default     = "us-east-1a"
+locals {
+  availability_zone = "${var.region}a"
 }

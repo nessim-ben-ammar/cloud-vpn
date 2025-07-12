@@ -10,7 +10,7 @@ resource "aws_internet_gateway" "cloud_vpn_ig" {
 resource "aws_subnet" "cloud_vpn_pub_sn" {
   vpc_id                  = aws_vpc.cloud_vpn_vpc.id
   cidr_block              = "10.0.0.0/24"
-  availability_zone       = var.availability_zone
+  availability_zone       = local.availability_zone
   map_public_ip_on_launch = true
 }
 
