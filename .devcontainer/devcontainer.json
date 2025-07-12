@@ -3,6 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "runArgs": ["--env-file", ".devcontainer/.env"],
   "shutdownAction": "stopContainer",
   "customizations": {
     "vscode": {

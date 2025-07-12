@@ -16,7 +16,7 @@ write_files:
       set -e
 
       # Detect external interface (you can hardcode if needed)
-      EXT_IF="eth0"
+      EXT_IF="ens5"
 
       # Create key directory
       mkdir -p /etc/wireguard
@@ -57,7 +57,7 @@ write_files:
       # Configure Unbound root DNS
       curl -o /var/lib/unbound/root.hints https://www.internic.net/domain/named.root
       unbound-anchor -a /var/lib/unbound/root.key || true
-      
+
       # Fix permissions for unbound user
       chown unbound:unbound /var/lib/unbound/root.key
       chmod 644 /var/lib/unbound/root.hints
