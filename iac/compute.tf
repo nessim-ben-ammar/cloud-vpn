@@ -47,3 +47,4 @@ resource "aws_instance" "cloud_vpn_instance" {
   key_name                    = aws_key_pair.cloud_vpn_ssh_key.key_name
   user_data                   = file("${path.module}/user-data.yaml")
 }
+
