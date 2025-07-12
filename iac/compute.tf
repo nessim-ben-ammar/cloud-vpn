@@ -51,6 +51,12 @@ resource "aws_instance" "cloud_vpn_instance" {
 resource "aws_eip" "static_ip" {
   count    = var.assign_elastic_ip ? 1 : 0
   instance = aws_instance.cloud_vpn_instance.id
-  vpc      = true
+  domain   = "vpc"
+
+  depends_on = [aws_instance.cloud_vpn_instance]
+
+  tags = {
+    Name = "cloud-vpn-static-ip"
+  }
 }
 
