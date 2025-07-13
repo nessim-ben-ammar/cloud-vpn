@@ -9,3 +9,8 @@ output "ssh_connection_command" {
   description = "Command to connect to the instance via SSH"
   value       = "ssh -i ${local_file.ssh_private_key.filename} ubuntu@${oci_core_instance.cloud_vpn_instance.public_ip}"
 }
+
+output "vpn_endpoint" {
+  description = "DNS name or IP clients should connect to"
+  value       = oci_core_instance.cloud_vpn_instance.public_ip
+}

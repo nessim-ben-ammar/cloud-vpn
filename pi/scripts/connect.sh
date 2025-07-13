@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Config
-KEY="pi_key"
+KEY="../ssh_keys/pi_ssh_key"
 USER="pi"
 HOST="192.168.188.2"
 
