@@ -5,7 +5,7 @@
 
 SERVER_IP=$(terraform -chdir=../iac output -raw instance_public_ip)
 SERVER="ubuntu@$SERVER_IP"
-SSH_KEY="../iac/ssh_keys/aws-instance-ssh-key"
+SSH_KEY="../iac/ssh_keys/oci-instance-ssh-key"
 ARCHIVE="${1:-wireguard-backup.tar.gz}"
 
 if [ ! -f "$ARCHIVE" ]; then
